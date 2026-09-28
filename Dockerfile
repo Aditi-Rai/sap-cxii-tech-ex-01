@@ -4,17 +4,24 @@ FROM python:3.10-slim
 # Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Install system dependency needed to unzip the dataset
+RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
 
-# Install any needed packages specified in requirements.txt
+# Install Python dependencies first (better layer caching)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
+COPY . .
+
+# Extract the dataset so the app can read it at startup
+RUN unzip -o data/archive.zip -d data/
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 
 # Define environment variable
-ENV NAME ProductSimilarityApp
+ENV NAME=ProductSimilarityApp
 
-# Run app.py when the container launches
+# Run the app
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
